@@ -1,0 +1,52 @@
+From b6b67d090c775fea1665691aa12ac1e104ec6147 Mon Sep 17 00:00:00 2001
+From: KextIntel <kextintel@users.noreply.github.com>
+Date: Sat, 24 Oct 2026 13:10:47 +0700
+Subject: [PATCH 1/2] KextIntel compat: KextIntelTGLAllowed for the
+ OCLP-root-patched donor, -wex-accel-off
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ WhateverXe/kern_xe.cpp                  | 7 ++++++-
+ tests/fixtures/boot_argument_names.json | 3 ++-
+ 2 files changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/WhateverXe/kern_xe.cpp b/WhateverXe/kern_xe.cpp
+index daf4053..bea3831 100644
+--- a/WhateverXe/kern_xe.cpp
++++ b/WhateverXe/kern_xe.cpp
+@@ -4384,6 +4384,10 @@ void XE::processKernel(KernelPatcher &patcher, DeviceInfo *info) {
+ 					mmio->release();
+ 				}
+ 			}
++			// KextIntel: the OCLP-root-patched donor (build/tahoe-payload) matches only when the IGPU carries this
++			// property (IOPropertyMatch), so a missing/disabled WhateverXe leaves the GPU unclaimed instead of running
++			// the donor unpatched. The WhateverXe-Graphics pkg personalities do not require it.
++			pci->setProperty("KextIntelTGLAllowed", true);
+ 			SYSLOG("igfx", "TGL donor path enabled for PCI 8086:%04x, platform 9A490000", pci->configRead16(2));
+ 		} else {
+ 			SYSLOG("igfx", "TGL experiment rejected: kernel or physical PCI identity mismatch");
+@@ -11408,7 +11412,8 @@ bool XE::processTGLAccelerator(KernelPatcher &patcher, size_t index, mach_vm_add
+ 			}
+ 			IORegistryEntry::getRegistryRoot()->setProperty("TGLRecoverySinglePassRequested",recoveryRequested);
+ 			IORegistryEntry::getRegistryRoot()->setProperty("TGLRecoverySinglePassReady",recoveryRequested && recoveryOK);
+-			tglAcceleratorReady = surfaceABIReady && adlnObserved && skuReady && urbReady && ccsReady && hizReady && ccsPSReady && ggttOK && observed && ok && gucOK && dmaWriteOK && hostOK && scratchOK && blitInitOK && tglMMIOUCReady && copyOK && auxAlignOK && iosCCSOK && ffModeOK && cpsOK && flushOK && tlbPreparserOK && semaphoreTLBOK && hangOK && recoveryOK && completionCacheOK && contextCacheOK;
++			tglAcceleratorReady = surfaceABIReady && adlnObserved && skuReady && urbReady && ccsReady && hizReady && ccsPSReady && ggttOK && observed && ok && gucOK && dmaWriteOK && hostOK && scratchOK && blitInitOK && tglMMIOUCReady && copyOK && auxAlignOK && iosCCSOK && ffModeOK && cpsOK && flushOK && tlbPreparserOK && semaphoreTLBOK && hangOK && recoveryOK && completionCacheOK && contextCacheOK &&
++				!checkKernelArgument("-wex-accel-off");  // KextIntel: keep the TGL framebuffer, refuse only the accelerator
+ 			// r201: resource/copy diagnostics are absent, not admission requirements.
+ 			IORegistryEntry::getRegistryRoot()->setProperty("TGLResourceDiagnosticsRemoved",true);
+ 			IORegistryEntry::getRegistryRoot()->setProperty("TGLAcceleratorAdmissionReady", tglAcceleratorReady);
+diff --git a/tests/fixtures/boot_argument_names.json b/tests/fixtures/boot_argument_names.json
+index afbfff4..b35902b 100644
+--- a/tests/fixtures/boot_argument_names.json
++++ b/tests/fixtures/boot_argument_names.json
+@@ -138,5 +138,6 @@
+   "-wex-display-trace": [],
+   "-wex-adlp-readout": [],
+   "-wex-adlp-load-only": [],
+-  "-wex-display13-offline": []
++  "-wex-display13-offline": [],
++  "-wex-accel-off": []
+ }
+-- 
+2.50.1 (Apple Git-155)
+
